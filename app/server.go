@@ -26,19 +26,15 @@ func main() {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
-	buf := make([]byte, 0, 4096) // big buffer
-	tmp := make([]byte, 256)
+	buf := make([]byte, 256)
 	for {
-		n, err := conn.Read(tmp)
+		_, err := conn.Read(buf)
 		if err != nil {
 			return
 		}
-		buf = append(buf, tmp[:n]...)
 		fmt.Println("total size:", buf)
 		fmt.Println(string(buf))
-		if string(buf) == "*1\r\n$4\r\nPING\r\n" {
-			conn.Write([]byte("+PONG\r\n"))
-		}
+		conn.Write([]byte("+PONG\r\n"))
 	}
 
 }
