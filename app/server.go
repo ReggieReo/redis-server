@@ -21,9 +21,24 @@ func main() {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
-	_, err = l.Accept()
+	conn, err := l.Accept()
 	if err != nil {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
+	buf := make([]byte, 0, 4096) // big buffer
+	tmp := make([]byte, 256)
+	for {
+		n, err := conn.Read(tmp)
+		if err != nil {
+			return
+		}
+		buf = append(buf, tmp[:n]...)
+		fmt.Println("total size:", buf)
+		fmt.Println(string(buf))
+		if string(buf) == "*1\r\n$4\r\nPING\r\n" {
+			conn.Write([]byte("+PONG\r\n"))
+		}
+	}
+
 }
