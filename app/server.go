@@ -39,9 +39,40 @@ func connectionHandler(conn net.Conn) {
 		if err != nil {
 			return
 		}
-		// fmt.Println(buf)
-		l, resp := ReadCommand(buf)
-		fmt.Println(l, ' ', "len of command")
-		fmt.Println(string(resp.Data), ' ', "data")
+		_, resp := ReadCommand(buf)
+		fmt.Println("type of command ", string(resp.Type))
+		fmt.Println("command raw ", string(resp.Raw))
+
+		switch resp.Type {
+		case String:
+			switch string(resp.Data) {
+			case "PONG":
+				conn.Write([]byte("+PONG\r\n"))
+			}
+		case Array:
+			var i int
+			var command []string
+			temp_resp := resp.Data
+			for ; i < resp.Count; i++ {
+				rl, rresp := ReadCommand(temp_resp)
+				command = append(command, string(rresp.Data))
+				temp_resp = temp_resp[rl:]
+			}
+			switch command[0] {
+			case "ECHO":
+				{
+					send_back := command[1]
+					response := fmt.Sprintf("$%d\r\n%s\r\n", len(send_back), send_back)
+					conn.Write([]byte(response))
+					break
+				}
+			case "PING":
+				{
+					conn.Write([]byte("+PONG\r\n"))
+				}
+			}
+		default:
+
+		}
 	}
 }

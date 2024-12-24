@@ -16,10 +16,11 @@ const (
 )
 
 type RESP struct {
-	Type  Type
-	Raw   []byte
-	Data  []byte
-	Count int
+	Type      Type
+	Raw       []byte
+	Data      []byte
+	ArrayData []byte
+	Count     int
 }
 
 // return the number of byte and resp command
