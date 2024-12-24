@@ -39,8 +39,9 @@ func connectionHandler(conn net.Conn) {
 		if err != nil {
 			return
 		}
-		fmt.Println("total size:", buf)
-		fmt.Println(string(buf))
-		conn.Write([]byte("+PONG\r\n"))
+		// fmt.Println(buf)
+		l, resp := ReadCommand(buf)
+		fmt.Println(l, ' ', "len of command")
+		fmt.Println(string(resp.Data), ' ', "data")
 	}
 }
