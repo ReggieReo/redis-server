@@ -23,7 +23,12 @@ type RESP struct {
 	Count     int
 }
 
-// return the number of byte and resp command
+func formatReturnString(returnString string) string {
+	response := fmt.Sprintf("$%d\r\n%s\r\n", len(returnString), returnString)
+	return response
+}
+
+// ReadCommand the number of byte and resp command
 func ReadCommand(packet []byte) (n int, resp RESP) {
 	if len(packet) == 0 {
 		return 0, RESP{}

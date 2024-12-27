@@ -21,6 +21,7 @@ func main() {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
+	m := newRedisMap()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -28,17 +29,20 @@ func main() {
 			os.Exit(1)
 		}
 
-		go connectionHandler(conn)
+		go connectionHandler(conn, m)
 	}
 }
 
-func connectionHandler(conn net.Conn) {
+func connectionHandler(conn net.Conn, m *redisMap) {
 	buf := make([]byte, 256)
 	for {
-		_, err := conn.Read(buf)
+		n, err := conn.Read(buf)
 		if err != nil {
+			fmt.Println("error: ", err)
 			return
 		}
+		fmt.Println(buf[:n])
+		fmt.Println(string(buf[:n]))
 		_, resp := ReadCommand(buf)
 		fmt.Println("type of command ", string(resp.Type))
 		fmt.Println("command raw ", string(resp.Raw))
@@ -62,13 +66,24 @@ func connectionHandler(conn net.Conn) {
 			case "ECHO":
 				{
 					send_back := command[1]
-					response := fmt.Sprintf("$%d\r\n%s\r\n", len(send_back), send_back)
-					conn.Write([]byte(response))
-					break
+					conn.Write([]byte(formatReturnString(send_back)))
 				}
 			case "PING":
 				{
 					conn.Write([]byte("+PONG\r\n"))
+				}
+			case "GET":
+				{
+					data := m.get(command[1])
+					if data == "" {
+						conn.Write([]byte("$-1\r\n"))
+					}
+					conn.Write([]byte(formatReturnString(data)))
+				}
+			case "SET":
+				{
+					m.set(command[1], command[2])
+					conn.Write([]byte("+OK\r\n"))
 				}
 			}
 		default:
