@@ -23,8 +23,16 @@ type RESP struct {
 	Count     int
 }
 
-func formatReturnString(returnString string) string {
+func formatBulkString(returnString string) string {
 	response := fmt.Sprintf("$%d\r\n%s\r\n", len(returnString), returnString)
+	return response
+}
+
+func formatArrayString(returnArray []string) string {
+	response := fmt.Sprintf("*%d\r\n", len(returnArray))
+	for _, v := range returnArray {
+		response += formatBulkString(v)
+	}
 	return response
 }
 

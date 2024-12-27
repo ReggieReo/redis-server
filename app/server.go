@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -23,6 +24,7 @@ func main() {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
+	config := getFlag()
 	m := newRedisMap()
 	for {
 		conn, err := l.Accept()
@@ -31,11 +33,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		go connectionHandler(conn, m)
+		go connectionHandler(conn, m, &config)
 	}
 }
 
-func connectionHandler(conn net.Conn, m *redisMap) {
+func connectionHandler(conn net.Conn, m *redisMap, config *map[string]string) {
 	buf := make([]byte, 256)
 	for {
 		_, err := conn.Read(buf)
@@ -51,6 +53,7 @@ func connectionHandler(conn net.Conn, m *redisMap) {
 			case "PONG":
 				conn.Write([]byte("+PONG\r\n"))
 			}
+
 		case Array:
 			var i int
 			var command []string
@@ -62,24 +65,28 @@ func connectionHandler(conn net.Conn, m *redisMap) {
 			}
 			switch strings.ToLower(command[0]) {
 			case "echo":
+
 				{
 					send_back := command[1]
-					conn.Write([]byte(formatReturnString(send_back)))
+					conn.Write([]byte(formatBulkString(send_back)))
 				}
 			case "ping":
+
 				{
 					conn.Write([]byte("+PONG\r\n"))
 				}
 			case "get":
+
 				{
 					data := m.get(command[1])
 					if data == "" {
 						conn.Write([]byte("$-1\r\n"))
 					} else {
-						conn.Write([]byte(formatReturnString(data)))
+						conn.Write([]byte(formatBulkString(data)))
 					}
 				}
 			case "set":
+
 				{
 					if len(command) == 5 && command[3] == "px" {
 						px, _ := strconv.Atoi(command[4])
@@ -89,9 +96,32 @@ func connectionHandler(conn net.Conn, m *redisMap) {
 					}
 					conn.Write([]byte("+OK\r\n"))
 				}
+			case "config":
+
+				fmt.Println(config)
+				{
+					switch strings.ToLower(command[1]) {
+					case "get":
+						reponse := []string{command[2], (*config)[command[2]]}
+						conn.Write([]byte(formatArrayString(reponse)))
+					}
+				}
 			}
 		default:
-
 		}
 	}
+}
+
+func getFlag() map[string]string {
+	dirPtr := flag.String("dir", "", "the path to the directory where the RDB file is stored")
+	dbFilenamePtr := flag.String("dbfilename", "", "the name of the RDB file")
+	flag.Parse()
+	config := make(map[string]string)
+	if *dirPtr != "" {
+		config["dir"] = *dirPtr
+	}
+	if *dbFilenamePtr != "" {
+		config["dbfilename"] = *dbFilenamePtr
+	}
+	return config
 }
