@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
@@ -36,16 +38,12 @@ func main() {
 func connectionHandler(conn net.Conn, m *redisMap) {
 	buf := make([]byte, 256)
 	for {
-		n, err := conn.Read(buf)
+		_, err := conn.Read(buf)
 		if err != nil {
 			fmt.Println("error: ", err)
 			return
 		}
-		fmt.Println(buf[:n])
-		fmt.Println(string(buf[:n]))
 		_, resp := ReadCommand(buf)
-		fmt.Println("type of command ", string(resp.Type))
-		fmt.Println("command raw ", string(resp.Raw))
 
 		switch resp.Type {
 		case String:
@@ -62,27 +60,33 @@ func connectionHandler(conn net.Conn, m *redisMap) {
 				command = append(command, string(rresp.Data))
 				temp_resp = temp_resp[rl:]
 			}
-			switch command[0] {
-			case "ECHO":
+			switch strings.ToLower(command[0]) {
+			case "echo":
 				{
 					send_back := command[1]
 					conn.Write([]byte(formatReturnString(send_back)))
 				}
-			case "PING":
+			case "ping":
 				{
 					conn.Write([]byte("+PONG\r\n"))
 				}
-			case "GET":
+			case "get":
 				{
 					data := m.get(command[1])
 					if data == "" {
 						conn.Write([]byte("$-1\r\n"))
+					} else {
+						conn.Write([]byte(formatReturnString(data)))
 					}
-					conn.Write([]byte(formatReturnString(data)))
 				}
-			case "SET":
+			case "set":
 				{
-					m.set(command[1], command[2])
+					if len(command) == 5 && command[3] == "px" {
+						px, _ := strconv.Atoi(command[4])
+						m.set(command[1], command[2], px)
+					} else {
+						m.set(command[1], command[2], 0)
+					}
 					conn.Write([]byte("+OK\r\n"))
 				}
 			}
